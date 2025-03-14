@@ -10,7 +10,7 @@ TODO: Clean up the output in the frontend app.
 
 Create a web application that sends data to Langflow and returns a useful result.
 Export a flow from the IDE, then serve the flow in headless mode in Docker. 
-Query the endpoint from a frontend.
+Post to the served endpoint from a frontend, run the flow, get a result.
 
 ## Package the application
 
