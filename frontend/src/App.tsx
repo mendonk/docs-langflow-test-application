@@ -9,16 +9,23 @@ import {
   Heading,
   useToast,
   HStack,
+  Text,
+  Divider,
+  Textarea,
+  Card,
+  CardBody,
 } from '@chakra-ui/react';
-import { PokemonCard } from './components/PokemonCard';
 import { searchPokemon } from './services/api';
-import { Pokemon } from './types/pokemon';
+import { sendChatMessage } from './services/chatService';
 import axios, { CancelTokenSource } from 'axios';
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [pokemon, setPokemon] = useState<Pokemon | null>(null);
+  const [pokemonResponse, setPokemonResponse] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatResponse, setChatResponse] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const cancelTokenRef = useRef<CancelTokenSource | null>(null);
   const toast = useToast();
 
@@ -49,21 +56,20 @@ function App() {
       return;
     }
 
-    // Cancel any ongoing request
     if (cancelTokenRef.current) {
       cancelTokenRef.current.cancel('New search started');
     }
 
-    // Create new cancel token
     cancelTokenRef.current = axios.CancelToken.source();
     setIsLoading(true);
+    setPokemonResponse('');
 
     try {
       const response = await searchPokemon(
         searchTerm.toLowerCase(),
         cancelTokenRef.current
       );
-      setPokemon(response.result.pokemon);
+      setPokemonResponse(response);
     } catch (error) {
       if (!axios.isCancel(error)) {
         toast({
@@ -73,7 +79,6 @@ function App() {
           duration: 3000,
           isClosable: true,
         });
-        setPokemon(null);
       }
     } finally {
       if (cancelTokenRef.current) {
@@ -83,43 +88,126 @@ function App() {
     }
   };
 
+  const handleChat = async () => {
+    if (!chatInput.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a message',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsChatLoading(true);
+    try {
+      const response = await sendChatMessage(chatInput);
+      setChatResponse(response);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to get chat response',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   return (
     <ChakraProvider>
       <Box minH="100vh" py={8} bg="gray.50">
         <Container maxW="container.md">
           <VStack spacing={8}>
-            <Heading>Pokédex</Heading>
+            <Heading>Pokédex & Chat</Heading>
             
-            <Box w="100%" display="flex" gap={4}>
-              <Input
-                placeholder="Enter Pokemon name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <HStack spacing={2}>
-                <Button
-                  colorScheme="blue"
-                  onClick={handleSearch}
-                  isLoading={isLoading}
-                  loadingText="Searching..."
-                  isDisabled={isLoading}
-                >
-                  Search
-                </Button>
-                {isLoading && (
+            {/* Pokédex Section */}
+            <Box w="100%">
+              <Heading size="md" mb={4}>Pokédex Search</Heading>
+              <Box display="flex" gap={4}>
+                <Input
+                  placeholder="Enter Pokemon name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <HStack spacing={2}>
                   <Button
-                    colorScheme="red"
-                    onClick={handleStop}
-                    variant="outline"
+                    colorScheme="blue"
+                    onClick={handleSearch}
+                    isLoading={isLoading}
+                    loadingText="Searching..."
+                    isDisabled={isLoading}
                   >
-                    Stop
+                    Search
                   </Button>
-                )}
-              </HStack>
+                  {isLoading && (
+                    <Button
+                      colorScheme="red"
+                      onClick={handleStop}
+                      variant="outline"
+                    >
+                      Stop
+                    </Button>
+                  )}
+                </HStack>
+              </Box>
+              {pokemonResponse && (
+                <Card mt={4} variant="outline" bg="white" boxShadow="sm">
+                  <CardBody>
+                    <Text
+                      as="pre"
+                      whiteSpace="pre-wrap"
+                      fontSize="sm"
+                      fontFamily="monospace"
+                    >
+                      {pokemonResponse}
+                    </Text>
+                  </CardBody>
+                </Card>
+              )}
             </Box>
 
-            {pokemon && <PokemonCard pokemon={pokemon} />}
+            <Divider />
+
+            {/* Chat Section */}
+            <Box w="100%">
+              <Heading size="md" mb={4}>Chat</Heading>
+              <VStack spacing={4} align="stretch">
+                {chatResponse && (
+                  <Card variant="outline" bg="white" boxShadow="sm">
+                    <CardBody>
+                      <Text
+                        whiteSpace="pre-wrap"
+                        fontSize="md"
+                        lineHeight="tall"
+                      >
+                        {chatResponse}
+                      </Text>
+                    </CardBody>
+                  </Card>
+                )}
+                <Textarea
+                  placeholder="Type your message..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleChat()}
+                  rows={3}
+                  bg="white"
+                />
+                <Button
+                  colorScheme="green"
+                  onClick={handleChat}
+                  isLoading={isChatLoading}
+                  loadingText="Sending..."
+                >
+                  Send Message
+                </Button>
+              </VStack>
+            </Box>
           </VStack>
         </Container>
       </Box>

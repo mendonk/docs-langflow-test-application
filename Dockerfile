@@ -22,4 +22,6 @@ ENV LANGFLOW_COMPONENTS_PATH=/app/components
 
 # Command to run the server
 EXPOSE 7860
-CMD ["langflow", "run", "--backend-only", "--env-file","/app/.env","--host", "0.0.0.0", "--port", "7860"]
+CMD ["langflow", "run", "--env-file","/app/.env","--host", "0.0.0.0", "--port", "7860"]
+
+# add "--backend-only", to CMD before --env-file to run headless
